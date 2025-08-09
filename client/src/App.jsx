@@ -1,79 +1,153 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import axios from "axios"; 
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { API } from "./api";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import Profile from "./pages/Profile";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import "./style/style.css";
 
 export default function App() {
   const [expenses, setExpenses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  const verifyAuth = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setAuthChecked(true);
+      return;
+    }
+
+    try {
+      await API.get("/auth/verify", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsAuthenticated(true);
+      await fetchExpenses();
+    } catch (error) {
+      console.error("Authentication error:", error);
+      localStorage.removeItem("token");
+      setIsAuthenticated(false);
+    } finally {
+      setAuthChecked(true);
+    }
+  };
 
   const fetchExpenses = async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get("http://localhost:5000/api/expenses");
+      const res = await API.get("/expenses", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
       setExpenses(res.data);
     } catch (error) {
       console.error("Error fetching expenses:", error);
+      if (error.response?.status === 401) {
+        handleLogout();
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
-
-  const addExpense = async (expense) => {
-    try {
-      await axios.post("http://localhost:5000/api/expenses", expense);
-      fetchExpenses();
-    } catch (error) {
-      console.error("Error adding expense:", error);
-    }
-  };
-
   const deleteExpense = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/expenses/${id}`);
-      fetchExpenses();
+      await API.delete(`/expenses/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      await fetchExpenses();
     } catch (error) {
       console.error("Error deleting expense:", error);
+      if (error.response?.status === 401) {
+        handleLogout();
+      }
     }
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsAuthenticated(false);
+  };
+
+  useEffect(() => {
+    verifyAuth();
+  }, []);
+
+  const PrivateRoute = ({ children }) => {
+    if (!authChecked) {
+      return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    }
+    return isAuthenticated ? children : <Navigate to="/login" replace />;
+  };
+
+  if (!authChecked) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
 
   return (
     <Router>
-      {/* Flex column layout */}
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100">
-        {/* Fixed Navbar */}
-        <Navbar />
-
-        {/* Main Content */}
-        <main className="pt-20 flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <div className="flex flex-col min-h-screen">
+        {isAuthenticated && <Navbar onLogout={handleLogout} />}
+        <main className="flex-grow">
           <Routes>
-            <Route path="/" element={<Dashboard expenses={expenses} isLoading={isLoading} />} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Dashboard expenses={expenses} isLoading={isLoading} />
+                </PrivateRoute>
+              }
+            />
             <Route
               path="/expenses"
               element={
-                <Expenses
-                  expenses={expenses}
-                  addExpense={addExpense}
-                  deleteExpense={deleteExpense}
-                  isLoading={isLoading}
-                />
+                <PrivateRoute>
+                  <Expenses
+                    expenses={expenses}
+                    isLoading={isLoading}
+                    onAdd={fetchExpenses}
+                    onDelete={deleteExpense}
+                  />
+                </PrivateRoute>
               }
             />
-            <Route path="/profile" element={<Profile />} />
+            <Route
+              path="/profile"
+              element={
+                <PrivateRoute>
+                  <Profile expenses={expenses} />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/login"
+              element={
+                isAuthenticated ? (
+                  <Navigate to="/" replace />
+                ) : (
+                  <Login setIsAuthenticated={setIsAuthenticated} />
+                )
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                isAuthenticated ? (
+                  <Navigate to="/" replace />
+                ) : (
+                  <Register />
+                )
+              }
+            />
+            <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
           </Routes>
         </main>
-
-        {/* Footer */}
-        <Footer />
+        {isAuthenticated && <Footer />}
       </div>
     </Router>
   );

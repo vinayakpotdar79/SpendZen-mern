@@ -1,23 +1,43 @@
-import React from 'react';
-import { FaTrash } from 'react-icons/fa';
+import React, { useState, useMemo } from 'react';
+import { FaTrash, FaUtensils, FaBus, FaHome, FaFilm, FaShoppingBag, FaHeartbeat, FaBook, FaTags } from 'react-icons/fa';
 import { format } from 'date-fns';
 
-const categoryColors = {
-  Food: 'bg-green-100 text-green-800',
-  Transportation: 'bg-blue-100 text-blue-800',
-  Housing: 'bg-purple-100 text-purple-800',
-  Entertainment: 'bg-yellow-100 text-yellow-800',
-  Shopping: 'bg-pink-100 text-pink-800',
-  Healthcare: 'bg-red-100 text-red-800',
-  Education: 'bg-indigo-100 text-indigo-800',
-  Other: 'bg-gray-100 text-gray-800',
+const categoryIcons = {
+  Food: <FaUtensils className="text-green-500" />,
+  Transportation: <FaBus className="text-blue-500" />,
+  Housing: <FaHome className="text-purple-500" />,
+  Entertainment: <FaFilm className="text-yellow-500" />,
+  Shopping: <FaShoppingBag className="text-pink-500" />,
+  Healthcare: <FaHeartbeat className="text-red-500" />,
+  Education: <FaBook className="text-indigo-500" />,
+  Other: <FaTags className="text-gray-500" />,
 };
 
 export default function ExpenseList({ expenses, isLoading, onDelete }) {
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 8;
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(exp =>
+      exp.category.toLowerCase().includes(search.toLowerCase()) ||
+      exp.note?.toLowerCase().includes(search.toLowerCase()) ||
+      format(new Date(exp.date), 'MMM dd, yyyy')
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
+  }, [expenses, search]);
+
+  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+  const paginatedExpenses = filteredExpenses.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
@@ -31,57 +51,77 @@ export default function ExpenseList({ expenses, isLoading, onDelete }) {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Date
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Category
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Amount
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Note
-            </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {expenses.map(exp => (
-            <tr key={exp._id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+    <div>
+      {/* Search */}
+      <div className="mb-6 flex justify-between items-center flex-wrap gap-3">
+        <input
+          type="text"
+          placeholder="Search by category, note, or date..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          className="border border-gray-300 rounded-lg px-4 py-2 w-full md:w-1/2 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
+      {/* Cards Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {paginatedExpenses.map(exp => (
+          <div
+            key={exp._id}
+            className="bg-white rounded-xl shadow-md p-5 border border-gray-100 hover:shadow-lg transition-all duration-200 flex flex-col justify-between"
+          >
+            {/* Top */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                {categoryIcons[exp.category] || categoryIcons.Other}
+                <span className="font-semibold text-gray-800">{exp.category}</span>
+              </div>
+              <span className="text-sm text-gray-500">
                 {format(new Date(exp.date), 'MMM dd, yyyy')}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${categoryColors[exp.category] || categoryColors.Other}`}>
-                  {exp.category}
-                </span>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                ₹{exp.amount.toFixed(2)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {exp.note || '-'}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button
-                  onClick={() => onDelete(exp._id)}
-                  className="text-red-600 hover:text-red-900"
-                  title="Delete"
-                >
-                  <FaTrash />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </span>
+            </div>
+
+            {/* Middle */}
+            <div className="mb-3">
+              <p className="text-2xl font-bold text-indigo-600">₹{exp.amount.toFixed(2)}</p>
+              <p className="text-gray-500 text-sm">{exp.note || 'No note provided'}</p>
+            </div>
+
+            {/* Bottom */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => onDelete(exp._id)}
+                className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50"
+                title="Delete"
+              >
+                <FaTrash />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-center mt-6 space-x-2">
+        <button
+          disabled={page === 1}
+          onClick={() => setPage(p => p - 1)}
+          className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300"
+        >
+          Prev
+        </button>
+        <span className="px-3 py-2">Page {page} of {totalPages}</span>
+        <button
+          disabled={page === totalPages}
+          onClick={() => setPage(p => p + 1)}
+          className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-300"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }

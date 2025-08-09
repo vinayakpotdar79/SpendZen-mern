@@ -3,7 +3,6 @@ import { API } from '../api';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { categories } from '../constants';
-
 export default function AddExpense({ onAdd }) {
     // console.log(onAdd)
   const [data, setData] = useState({ 
