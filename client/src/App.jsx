@@ -15,28 +15,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-
-  const verifyAuth = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setAuthChecked(true);
-      return;
-    }
-
-    try {
-      await API.get("/auth/verify", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setIsAuthenticated(true);
-      await fetchExpenses();
-    } catch (error) {
-      console.error("Authentication error:", error);
-      localStorage.removeItem("token");
-      setIsAuthenticated(false);
-    } finally {
-      setAuthChecked(true);
-    }
-  };
+  const [user, setUser] = useState(null);
 
   const fetchExpenses = async () => {
     try {
@@ -52,6 +31,29 @@ export default function App() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const verifyAuth = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setAuthChecked(true);
+      return;
+    }
+
+    try {
+      const res = await API.get("/auth/verify", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsAuthenticated(true);
+      setUser(res.data.user);
+      await fetchExpenses();
+    } catch (error) {
+      console.error("Authentication error:", error);
+      localStorage.removeItem("token");
+      setIsAuthenticated(false);
+    } finally {
+      setAuthChecked(true);
     }
   };
 
@@ -72,6 +74,8 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     setIsAuthenticated(false);
+    setUser(null);
+    setExpenses([]);
   };
 
   useEffect(() => {
@@ -91,15 +95,15 @@ export default function App() {
 
   return (
     <Router>
-      <div className="flex flex-col min-h-screen">
-        {isAuthenticated && <Navbar onLogout={handleLogout} />}
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100">
+        {isAuthenticated && <Navbar onLogout={handleLogout} user={user} />}
         <main className="flex-grow">
           <Routes>
             <Route
               path="/"
               element={
                 <PrivateRoute>
-                  <Dashboard expenses={expenses} isLoading={isLoading} />
+                  <Dashboard expenses={expenses} isLoading={isLoading} user={user} />
                 </PrivateRoute>
               }
             />
@@ -112,6 +116,7 @@ export default function App() {
                     isLoading={isLoading}
                     onAdd={fetchExpenses}
                     onDelete={deleteExpense}
+                    user={user}
                   />
                 </PrivateRoute>
               }
@@ -120,7 +125,7 @@ export default function App() {
               path="/profile"
               element={
                 <PrivateRoute>
-                  <Profile expenses={expenses} />
+                  <Profile user={user} />
                 </PrivateRoute>
               }
             />
@@ -130,18 +135,18 @@ export default function App() {
                 isAuthenticated ? (
                   <Navigate to="/" replace />
                 ) : (
-                  <Login setIsAuthenticated={setIsAuthenticated} />
+                  <Login
+                    setIsAuthenticated={setIsAuthenticated}
+                    setUser={setUser}
+                    fetchExpenses={fetchExpenses} // ✅ Pass so login can refresh data
+                  />
                 )
               }
             />
             <Route
               path="/register"
               element={
-                isAuthenticated ? (
-                  <Navigate to="/" replace />
-                ) : (
-                  <Register />
-                )
+                isAuthenticated ? <Navigate to="/" replace /> : <Register />
               }
             />
             <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />

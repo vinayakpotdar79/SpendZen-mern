@@ -6,7 +6,7 @@ import MonthlyTrend from "../components/MonthlyTrend";
 
 export default function Dashboard({ expenses }) {
   return (
-          <main className="pt-20 flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+    <main className="pt-20 flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
     <div className="space-y-6">
       <Summary expenses={expenses} />
       <div className="grid md:grid-cols-2 gap-6">

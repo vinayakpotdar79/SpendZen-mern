@@ -3,7 +3,7 @@ import { API } from "../api";
 import { useNavigate, Link } from "react-router-dom";
 import { FiPieChart ,FiActivity, FiClock } from "react-icons/fi";
 
-export default function Login({ setIsAuthenticated }) {
+export default function Login({  setIsAuthenticated, setUser, fetchExpenses }) {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   
@@ -26,6 +26,7 @@ export default function Login({ setIsAuthenticated }) {
     });
     localStorage.setItem("token", res.data.token);
     setIsAuthenticated(true);
+     await fetchExpenses();
     navigate("/"); // redirect to dashboard
   } catch (err) {
     console.error(err.response?.data?.message || "Login failed");

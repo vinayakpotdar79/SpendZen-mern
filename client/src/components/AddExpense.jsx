@@ -22,27 +22,37 @@ export default function AddExpense({ onAdd }) {
     setData(prev => ({ ...prev, date }));
   };
 
-  const submit = async e => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await API.post('/expenses', {
+ const submit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
+  try {
+    await API.post(
+      "/expenses",
+      {
         ...data,
-        date: data.date.toISOString()
-      });
-      onAdd();
-      setData({ 
-        date: new Date(), 
-        category: '', 
-        amount: '', 
-        note: '' 
-      });
-    } catch (error) {
-      console.error("Error adding expense:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        date: data.date.toISOString(),
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
+
+    onAdd();
+    setData({
+      date: new Date(),
+      category: "",
+      amount: "",
+      note: "",
+    });
+  } catch (error) {
+    console.error("Error adding expense:", error.response?.data || error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   return (
     <form onSubmit={submit} className="bg-white p-6 rounded-lg shadow-sm">
