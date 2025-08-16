@@ -8,7 +8,8 @@ import {
   FiLogOut,
 } from "react-icons/fi";
 
-export default function Navbar() {
+
+export default function Navbar({onLogout, user}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -18,8 +19,8 @@ export default function Navbar() {
     { name: "Profile", path: "/profile", icon: <FiUser /> },
   ];
 
-  const handleLogout = () => {
-    console.log("User logged out");
+    const handleLogout = () => {
+    onLogout();
   };
 
   return (
@@ -103,7 +104,11 @@ export default function Navbar() {
             }}
             className="flex items-center w-full p-4 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 border-t border-gray-200"
           >
-            <FiLogOut className="mr-3" /> Logout
+            <FiLogOut className="mr-3" > 
+              <link to ="/logout">
+              Logout
+              </link>
+              </FiLogOut>
           </button>
         </div>
       )}
